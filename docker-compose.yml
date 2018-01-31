@@ -1,0 +1,101 @@
+version: '3'
+services:
+  web:
+    build:
+      context: .
+      args: &WEB_BUILD_ARGS
+#        ASSETS_S3_BUCKET: 'inviqa-assets-docker-thunder'
+        DEVELOPMENT_MODE: 'true'
+        RUN_BUILD: 'false'
+    depends_on:
+      - mysql
+      - sshforward
+      - mailcatcher
+      - tideways
+    env_file:
+      - ./docker.env
+    environment: &WEB_ENV_VARS
+#      ASSETS_S3_BUCKET: 'inviqa-assets-docker-thunder'
+      ASSETS_ENV: development
+      ASSETS_CLEANUP: 'false'
+      DATABASE_NAME: docker_thunder
+      DATABASE_USER: docker_thunder
+      DATABASE_PASSWORD: docker_thunder
+      DATABASE_HOST: mysql
+      SENDMAIL_RELAY_HOST: 'mailcatcher'
+      SENDMAIL_RELAY_PORT: 1025
+      XDEBUG_REMOTE_ENABLED: 'false'
+      TIDEWAYS_ENABLED: 'true'
+      RUN_BUILD: 'false'
+      WEB_DIRECTORY: docroot
+      AUTH_HTTP_HEALTHCHECK_LOCATION: '/status/healthcheck'
+      PUBLIC_ADDRESS: 'http://docker-thunder.test'
+      APP_HOSTNAME: 'docker-thunder.test'
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--header", "--insecure", "https://localhost/status/healthcheck"]
+      interval: 10s
+      retries: 12
+    expose:
+      - 80
+      - 443
+    # Please define ports in your docker-compose.override.yml
+    # ports:
+    #  - '80:80'
+    #  - '443:443'
+
+  mysql:
+    image: quay.io/continuouspipe/mysql5.6:stable
+    environment:
+      MYSQL_ROOT_PASSWORD: 984C42CF342f7j6
+      MYSQL_DATABASE: docker_thunder
+      MYSQL_USER: docker_thunder
+      MYSQL_PASSWORD: docker_thunder
+
+  mailcatcher:
+    image: quay.io/continuouspipe/mailcatcher:stable
+    extra_hosts:
+      - 'mailcatcher:127.0.0.1'
+    expose:
+      - 1025
+      - 1080
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "http://localhost:1080/"]
+      interval: 2m
+      retries: 1
+    # Please define ports in your docker-compose.override.yml
+    # ports:
+    #  - '1080:1080'
+
+  tideways:
+    image: quay.io/continuouspipe/tideways:stable
+    expose:
+      - 9135
+
+  sshforward:
+    image: quay.io/continuouspipe/ssh-forward:stable
+    environment:
+      SSH_FORWARD_PASSWORD: xd3bug
+    expose:
+      - 9000
+    # Please define ports in your docker-compose.override.yml
+    # ports:
+    #  - '2222:22'
+
+  redis:
+    image: quay.io/continuouspipe/redis3:stable
+    # Please define ports in your docker-compose.override.yml
+    # ports:
+    #  - '6379:6379'
+
+#  solr:
+#    image: quay.io/continuouspipe/drupal8-solr4:stable
+#    volumes:
+#      - solr_data:/usr/local/share/solr/d8/data/
+
+#volumes:
+#  solr_data:
+#    driver: local
+#    driver_opts:
+#      type: tmpfs
+#      device: tmpfs
+#      o: size=100m,uid=1000
